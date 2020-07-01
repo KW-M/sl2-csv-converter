@@ -9,18 +9,20 @@
 
     <title>sl2->csv converter</title>
 
-    <link id="favicon" rel="icon" href="https://glitch.com/edit/favicon-app.ico" type="image/x-icon">
+    <link id="favicon" rel="icon" href="favicon.ico" type="image/x-icon">
 
 </head>
 
 <body style="text-align: center;">
-    <a id="downloadAnchorElem" style="display:none"></a>
+    <img src="favicon.ico" /></br>
     Open a .sl2 sonar file: <input type="file" accept=".sl2, .slg" id="input" />
     <h3 id="message"></h3>
-    <progress id="progress" style="display: none;"></progress>
     <button style="display: none;margin:auto" id="download_button">Download CSV</button>
     <script src="ouput.js"></script>
-    <p>Info: This is a browser port of the node-sl2 library, much of this code was taken directly from there.</p>
+    <p><b>Info:</b> This tool converts Lowrance's chart plotter sonar files to lat,lon,depth columns in a csv file.</br>
+        It is a browser port (using browserify) of the <a
+            href="https://github.com/kmpm/node-sl2format/">node-sl2format</a> library (modified
+        to output csv)</p>
 </body>
 
 </html>
