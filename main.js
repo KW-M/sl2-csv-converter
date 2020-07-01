@@ -20,7 +20,6 @@ function handleFiles(evt) {
 
     function headerFound(header) {
         console.log('header', header);
-        document.getElementById("message").innerHTML = "Found Header: " + JSON.stringify(header) + "<\\br>Converting...";
         console.log('-------------------');
     };
 

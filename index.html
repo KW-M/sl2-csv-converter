@@ -14,12 +14,13 @@
 </head>
 
 <body style="text-align: center;">
-    <img src="favicon.ico" /></br>
+    <img src="favicon.ico" /><br />
     Open a .sl2 sonar file: <input type="file" accept=".sl2, .slg" id="input" />
     <h3 id="message"></h3>
     <button style="display: none;margin:auto" id="download_button">Download CSV</button>
     <script src="ouput.js"></script>
-    <p><b>Info:</b> This tool converts Lowrance's chart plotter sonar files to lat,lon,depth columns in a csv file.</br>
+    <p><b>Info:</b> This tool converts Lowrance's chart plotter sonar files to lat,lon,depth columns in a csv
+        file.<br />
         It is a browser port (using browserify) of the <a
             href="https://github.com/kmpm/node-sl2format/">node-sl2format</a> library (modified
         to output csv)</p>
