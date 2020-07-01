@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A cool thing made with Glitch">
+
+    <title>sl2->csv converter</title>
+
+    <link id="favicon" rel="icon" href="https://glitch.com/edit/favicon-app.ico" type="image/x-icon">
+
+</head>
+
+<body style="text-align: center;">
+    <a id="downloadAnchorElem" style="display:none"></a>
+    Open a .sl2 sonar file: <input type="file" accept=".sl2, .slg" id="input" />
+    <h3 id="message"></h3>
+    <progress id="progress" style="display: none;"></progress>
+    <button style="display: none;margin:auto" id="download_button">Download CSV</button>
+    <script src="ouput.js"></script>
+    <p>Info: This is a browser port of the node-sl2 library, much of this code was taken directly from there.</p>
+</body>
+
+</html>
