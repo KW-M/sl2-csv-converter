@@ -7216,6 +7216,14 @@ var download = require('./download.min.js');
 var inputElement = document.getElementById("input");
 inputElement.addEventListener("change", handleFiles, false);
 
+function getLinebreak() {
+  if (navigator.userAgent.indexOf("Windows") != -1) {
+    return "\r\n";
+  }
+
+  return "\n";
+}
+
 function handleFiles(evt) {
   var files = evt.target.files;
   var file = files[0];
@@ -7224,13 +7232,13 @@ function handleFiles(evt) {
   var options = {
     feetToMeter: true,
     //default false
-    convertProjection: true,
+    convertProjection: false,
     //default false
     radToDeg: true //default false
 
   };
   var reader = new sl2.Reader(options);
-  var outputString = 'longitude,latitude,depth(m)\n';
+  var outputString = 'latitude,longitude,depth(m)' + getLinebreak();
 
   function headerFound(header) {
     console.log('header', header);
@@ -7239,7 +7247,7 @@ function handleFiles(evt) {
 
   ;
   reader.on('data', function (block) {
-    outputString += block.longitude + ',' + block.latitude + ',' + block.waterDepth + '\n';
+    outputString += block.latitude + ',' + block.longitude + ',' + block.waterDepth + getLinebreak();
   });
 
   function downloadCSV(string) {

@@ -1,8 +1,12 @@
+This is a browser-based website for converting down-pointing .sl2 lowrance sonar files to csv files completely on the client side.
+
+***NOTE: I'm still getting nonsensical values for the longitude conversion in the output file. If anyone has an idea where I went wrong that'd be awesome!***
+
 How to build and run this version:
 
 1. install npm
 2. open terminal & `cd` into this folder.
-3. run `browserify examples/sl2-csv_clientside.js -o ouput.js`
+3. run `browserify main.js -o ouput.js -t [ babelify --presets [ @babel/preset-env ] ]`
 4. open `index.html` in your browser.
 
 # node-sl2 readme
