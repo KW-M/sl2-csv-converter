@@ -1,6 +1,7 @@
-This is a browser-based website for converting down-pointing .sl2 lowrance sonar files to csv files completely on the client side.
+This is a browser-based website for converting down-pointing .sl2 lowrance sonar files to csv files completely in your browser.
+The live website of this repo can be found at: [kw-m.github.io/sl2-csv-converter](http://kw-m.github.io/sl2-csv-converter)
 
-***NOTE: I'm still getting nonsensical values for the longitude conversion in the output file. If anyone has an idea where I went wrong that'd be awesome!***
+***NOTE: I'm still getting nonsensical values for the longitude conversion in the output file. If someone has an idea where I went wrong, do let me know with a github issue or submit a pull request!***
 
 How to build and run this version:
 
