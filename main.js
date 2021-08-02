@@ -1,46 +1,18 @@
-var sl2 = module.exports = require('./lib');
+var sl2 = module.exports = require('./lib/ruby_conversion.js');
 var download = require('./download.min.js')
 
 const inputElement = document.getElementById("input");
 inputElement.addEventListener("change", handleFiles, false);
 
-function getLinebreak() {
-    if (navigator.userAgent.indexOf("Windows") != -1) {
-        return "\r\n";
-    }
-    return "\n";
-}
+let output_csv_string = "";
 
 function handleFiles(evt) {
     var files = evt.target.files;
     var file = files[0];
-    console.log(file)
-    var jsFileReader = new FileReader();
-    var options = {
-        feetToMeter: true, //default false
-        convertProjection: false, //default false
-        radToDeg: true //default false
-    };
-
-    var reader = new sl2.Reader(options);
-    var outputString = 'latitude,longitude,depth(m)' + getLinebreak()
-
-    function headerFound(header) {
-        console.log('header', header);
-        console.log('-------------------');
-    };
-
-    reader.on('data', function (block) {
-        outputString += block.latitude + ',' + block.longitude + ',' + block.waterDepth + getLinebreak();
-    });
+    console.log("got file:", file)
 
     function downloadCSV(string) {
         download(string, file.name + "_converted.csv", "text/csv")
-        // var dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(string);
-        // var dlAnchorElem = document.getElementById('downloadAnchorElem');
-        // dlAnchorElem.setAttribute("href", dataStr);
-        // dlAnchorElem.setAttribute("download", file.name + "_converted.csv");
-        // dlAnchorElem.click();
     }
 
     function conversionCompleteHandler() {
@@ -48,15 +20,18 @@ function handleFiles(evt) {
         var button = document.getElementById("download_button")
         button.style.display = 'block';
         button.onclick = function () {
-            downloadCSV(outputString)
+            downloadCSV(output_csv_string)
         }
     }
 
+
+    var jsFileReader = new FileReader();
     jsFileReader.onload = function (event) {
-        console.log("Got file: ", event.target.result);
+        console.log("Loaded file: ", event.target.result);
         document.getElementById("message").innerHTML = "Converting..."
         setTimeout(function () {
-            reader.wholeLoad(event.target.result, null, headerFound, conversionCompleteHandler);
+            output_csv_string = sl2.convert_sl2(event.target.result);
+            conversionCompleteHandler();
         }, 10)
     }
     jsFileReader.readAsArrayBuffer(file)
