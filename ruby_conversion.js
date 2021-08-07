@@ -28,26 +28,26 @@ const typeReaderFunctions = {
 // Available block attributes, their offset inside each block and their type:
 let block_def = {
     'blockSize': { 'offset': 26, 'type': 'UInt16LE', 'len': 2 },
-    // 'lastBlockSize': {'offset': 28, 'type':'UInt16LE', 'len': 2},
-    // 'channel': {'offset': 30, 'type':'UInt16LE', 'len': 2},
-    // 'packetSize': {'offset': 32, 'type':'UInt16LE', 'len': 2},
-    // 'frameIndex': {'offset': 34, 'type':'UInt16LE', 'len': 4},
-    // 'upperLimit': {'offset': 38, 'type':  'FloatLE', 'len': 4},
-    // 'lowerLimit': {'offset': 42, 'type':  'FloatLE', 'len': 4},
+    // 'lastBlockSize': {'offset': 28, 'type':'UInt16LE', 'len': 2 },
+    // 'channel': {'offset': 30, 'type':'UInt16LE', 'len': 2 },
+    // 'packetSize': {'offset': 32, 'type': 'UInt16LE', 'len': 2 },
+    // 'frameIndex': {'offset': 34, 'type': 'UInt32LE', 'len': 4 },
+    // 'upperLimit': {'offset': 38, 'type':  'FloatLE', 'len': 4 },
+    // 'lowerLimit': {'offset': 42, 'type':  'FloatLE', 'len': 4 },
     // 'frequency': {'offset': 51, 'type':  'UInt8', 'len': 1},
     // 'time1': {'offset': 58, 'type':'UInt16LE', 'len': 4}           // unknown resolution, unknown epoche
     'waterDepthFt': { 'offset': 62, 'type': 'FloatLE', 'len': 4 },   // in feet
-    // 'keelDepthFt': {'offset': 66, 'type':  'FloatLE', 'len': 4},    // in feet
-    // 'speedGpsKnots': {'offset': 98, 'type':  'FloatLE', 'len': 4},  // in knots
-    // 'temperature': {'offset': 102, 'type':  'FloatLE', 'len': 4},   // in °C
-    'lowrance_longitude': { 'offset': 106, 'type': 'UInt16LE', 'len': 4 },   // Lowrance encoding (easting)
-    'lowrance_latitude': { 'offset': 110, 'type': 'UInt16LE', 'len': 4 },    // Lowrance encoding (northing)
-    // 'speedWaterKnots': {'offset': 114, 'type':  'FloatLE', 'len': 4},  // from "water wheel sensor" if present, else GPS value(?)
-    // 'courseOverGround': {'offset': 118, 'type':  'FloatLE', 'len': 4}, // ourseOverGround in radians
-    // 'altitudeFt': {'offset': 122, 'type':  'FloatLE', 'len': 4},       // in feet
-    // 'heading': {'offset': 126, 'type':  'FloatLE', 'len': 4},          // in radians
-    // 'flags': {'offset': 130, 'type':'UInt16LE', 'len': 2},
-    // 'time': {'offset': 138, 'type':'UInt16LE', 'len': 4}              // unknown resolution, unknown epoche
+    // 'keelDepthFt': {'offset': 66, 'type':  'FloatLE', 'len': 4 },    // in feet
+    // 'speedGpsKnots': {'offset': 98, 'type':  'FloatLE', 'len': 4 },  // in knots
+    // 'temperature': {'offset': 102, 'type':  'FloatLE', 'len': 4 },   // in °C
+    'lowrance_longitude': { 'offset': 106, 'type': 'UInt32LE', 'len': 4 },   // Lowrance encoding (easting)
+    'lowrance_latitude': { 'offset': 110, 'type': 'UInt32LE', 'len': 4 },    // Lowrance encoding (northing)
+    // 'speedWaterKnots': {'offset': 114, 'type':  'FloatLE', 'len': 4 },  // from "water wheel sensor" if present, else GPS value(?)
+    // 'courseOverGround': {'offset': 118, 'type':  'FloatLE', 'len': 4 }, // ourseOverGround in radians
+    // 'altitudeFt': {'offset': 122, 'type':  'FloatLE', 'len': 4 },       // in feet
+    // 'heading': {'offset': 126, 'type':  'FloatLE', 'len': 4 },          // in radians
+    // 'flags': {'offset': 130, 'type':'UInt16LE', 'len': 2 },
+    // 'time': {'offset': 138, 'type': 'UInt32LE', 'len': 4 }              // unknown resolution, unknown epoche
 }
 
 function readBlock(dataView, block_offset) {
@@ -59,6 +59,7 @@ function readBlock(dataView, block_offset) {
             const type = block_def[key].type;
             const typeReader = typeReaderFunctions[type];
             output[key] = typeReader(dataView, value_byte_offset)
+            console.log(`${key} is ${value_byte_offset}`)
         }
     }
     return output;
@@ -77,8 +78,8 @@ function convert_sl2(sl2_file_buffer) {
     let block_offset = 0
     block_offset += 10   // Startindex of the first block (i.e. skip the 10 Bytes of Header)
 
-    const dataView = new DataView(sl2_file_buffer)
-    const sl2_file_size = sl2_file_buffer.byteLength
+    const dataView = new DataView(sl2_file_buffer, 0)
+    const sl2_file_size = dataView.byteLength
     console.log(sl2_file_size, block_offset)
     while (block_offset < sl2_file_size) {
 
@@ -93,10 +94,10 @@ function convert_sl2(sl2_file_buffer) {
         // A few conversions into non-proprietary or metric formats:
         // =========================================================
 
-        // if(h['lowrance_longitude'] != undefined) h['longitude'] = h['lowrance_longitude']/POLAR_EARTH_RADIUS * (180/PI)
-        // [ Caution! ] If the expected longitude (in decimal degrees) is *negative*, use the following line instead:
         if (h['lowrance_longitude'] != undefined) {
-            h['longitude'] = (h['lowrance_longitude'] - MAX_UINT4) / POLAR_EARTH_RADIUS * (180 / PI)
+            h['longitude'] = h['lowrance_longitude'] / POLAR_EARTH_RADIUS * (180 / PI)
+            // [ Caution! ] If the expected longitude (in decimal degrees) is *negative*, use the following line instead:
+            if (h['longitude'] > 180) h['longitude'] = (h['lowrance_longitude'] - MAX_UINT4) / POLAR_EARTH_RADIUS * (180 / PI)
             delete h['lowrance_longitude'];
         }
 
