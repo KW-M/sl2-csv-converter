@@ -112,6 +112,152 @@ function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "functi
 },{}],2:[function(require,module,exports){
 "use strict";
 
+var sl2 = require('./ruby_conversion.js');
+
+var download = require('./download.min.js'); // var MultiSelect = require('./multi-select-umd.js')
+// import MultiSelect from 'multi-select';
+
+
+var inputElement = document.getElementById("input");
+inputElement.addEventListener("change", handleFiles, false);
+
+function setMessage(message) {
+  document.getElementById("message").innerHTML = message;
+}
+
+function getLinebreak() {
+  if (navigator.userAgent.indexOf("Windows") != -1) {
+    return "\r\n";
+  }
+
+  return "\n";
+}
+
+var columnSelector;
+
+function addColumnSelctionPicker(resultObject) {
+  // var selectParent = document.getElementById("Column_Selector")
+  var options = [];
+  console.log(resultObject);
+
+  for (var key in resultObject[0]) {
+    options.push(key);
+  }
+
+  columnSelector = new MultiSelect("#Column_Selector", {
+    items: options,
+    current: ["latitude", "longitude", "waterDepthM"],
+    sort: false,
+    placeholder: "Select columns to include"
+  });
+} // function getSelectValues(selectElem) {
+//     var result = [];
+//     var options = selectElem && selectElem.options;
+//     var opt;
+//     for (var i = 0, iLen = options.length; i < iLen; i++) {
+//         opt = options[i];
+//         if (opt.selected) {
+//             result.push(opt.value || opt.text);
+//         }
+//     }
+//     return result;
+// }
+
+
+function getSelectedColumns() {
+  // var select = document.getElementById("mySelect")
+  var selectedOptions = columnSelector.getCurrent();
+  var result = {};
+
+  for (var i = 0; i < selectedOptions.length; i++) {
+    result[selectedOptions[i].value] = true;
+  }
+
+  return result;
+}
+
+function resultToCSV(resultObject, columsToInclude) {
+  var columns = Object.keys(resultObject[0]).filter(function (rowName) {
+    return columsToInclude[rowName] == true;
+  });
+  var output_csv_string = columns.join(",") + getLinebreak(); // Finally every row is written to the csv string:
+
+  for (var i = 0; i < resultObject.length; i++) {
+    output_csv_string += Object.keys(resultObject[i]).filter(function (rowName) {
+      return columsToInclude[rowName] == true;
+    }).map(function (keyName) {
+      return resultObject[i][keyName].toString();
+    }).join(",") + getLinebreak();
+  }
+
+  return output_csv_string;
+}
+
+function resultToKML(resultObject) {
+  var output_kml_string = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n    <kml xmlns=\"http://www.opengis.net/kml/2.2\">\n    <Document>\n      <name>SonarConverted.kml</name>\n      <open>1</open>\n      <Placemark>\n        <name>SonarPath</name>\n        <LineString>\n          <extrude>1</extrude>\n          <tessellate>1</tessellate>\n          <altitudeMode>relativeToGround</altitudeMode>\n          <coordinates>\n          "; // every row is written to the kml string:
+
+  for (var i = 0; i < resultObject.length; i++) {
+    output_kml_string += ["longitude", "latitude", "waterDepthM"].map(function (keyName) {
+      // if (keyName == "waterDepthM") resultObject[i][keyName] *= -1;
+      return resultObject[i][keyName].toString();
+    }).join(",") + " "; // space char
+  }
+
+  output_kml_string += "\n                </coordinates>\n            </LineString>\n        </Placemark>\n    </Document>\n    </kml>\n    ";
+  return output_kml_string;
+}
+
+function handleFiles(evt) {
+  var files = evt.target.files;
+  var file = files[0];
+
+  function downloadCSV(string) {
+    download(string, file.name + "_converted.csv", "text/csv");
+  }
+
+  function downloadKML(string) {
+    download(string, file.name + "_converted.kml", "application/vnd.google-earth.kml+xml");
+  }
+
+  function conversionCompleteHandler(output) {
+    setMessage("Done!");
+    addColumnSelctionPicker(output);
+    var button = document.getElementById("download_button");
+    button.parentNode.style.display = 'block';
+
+    button.onclick = function () {
+      var output_format = document.getElementById("Output_Format").value; // if csv is the selected format:
+
+      if (output_format == "csv") {
+        downloadCSV(resultToCSV(output, getSelectedColumns()));
+      } else if (output_format == "kml") {
+        downloadKML(resultToKML(output));
+      }
+    };
+  }
+
+  var jsFileReader = new FileReader();
+
+  jsFileReader.onload = function (event) {
+    console.log("Loaded file: ", event.target.result);
+    document.getElementById("Info_Text").style.display = "none";
+    document.getElementById("input").disabled = "true";
+    document.getElementById("message").innerHTML = "Converting... (May make page unresponsive)";
+    setTimeout(function () {
+      // give the message time to be displayed before blocking the UI thread.
+      var output = sl2.convert_sl2(event.target.result);
+      conversionCompleteHandler(output);
+    }, 100);
+  };
+
+  jsFileReader.readAsArrayBuffer(file);
+}
+
+module.exports = {};
+
+},{"./download.min.js":1,"./ruby_conversion.js":3}],3:[function(require,module,exports){
+"use strict";
+
 // Constants:
 var POLAR_EARTH_RADIUS = 6356752.3142;
 var PI = Math.PI;
@@ -152,23 +298,71 @@ var block_def = {
     'type': 'UInt16LE',
     'len': 2
   },
-  // 'lastBlockSize': {'offset': 28, 'type':'UInt16LE', 'len': 2 },
-  // 'channel': {'offset': 30, 'type':'UInt16LE', 'len': 2 },
-  // 'packetSize': {'offset': 32, 'type': 'UInt16LE', 'len': 2 },
-  // 'frameIndex': {'offset': 34, 'type': 'UInt32LE', 'len': 4 },
-  // 'upperLimit': {'offset': 38, 'type':  'FloatLE', 'len': 4 },
-  // 'lowerLimit': {'offset': 42, 'type':  'FloatLE', 'len': 4 },
-  // 'frequency': {'offset': 51, 'type':  'UInt8', 'len': 1},
-  // 'time1': {'offset': 58, 'type':'UInt16LE', 'len': 4}           // unknown resolution, unknown epoche
+  'lastBlockSize': {
+    'offset': 28,
+    'type': 'UInt16LE',
+    'len': 2
+  },
+  'channel': {
+    'offset': 30,
+    'type': 'UInt16LE',
+    'len': 2
+  },
+  'packetSize': {
+    'offset': 32,
+    'type': 'UInt16LE',
+    'len': 2
+  },
+  'frameIndex': {
+    'offset': 34,
+    'type': 'UInt32LE',
+    'len': 4
+  },
+  'upperLimit': {
+    'offset': 38,
+    'type': 'FloatLE',
+    'len': 4
+  },
+  'lowerLimit': {
+    'offset': 42,
+    'type': 'FloatLE',
+    'len': 4
+  },
+  'frequency': {
+    'offset': 51,
+    'type': 'UInt8',
+    'len': 1
+  },
+  'time1': {
+    'offset': 58,
+    'type': 'UInt16LE',
+    'len': 4
+  },
+  // unknown resolution, unknown epoche
   'waterDepthFt': {
     'offset': 62,
     'type': 'FloatLE',
     'len': 4
   },
   // in feet
-  // 'keelDepthFt': {'offset': 66, 'type':  'FloatLE', 'len': 4 },    // in feet
-  // 'speedGpsKnots': {'offset': 98, 'type':  'FloatLE', 'len': 4 },  // in knots
-  // 'temperature': {'offset': 102, 'type':  'FloatLE', 'len': 4 },   // in °C
+  'keelDepthFt': {
+    'offset': 66,
+    'type': 'FloatLE',
+    'len': 4
+  },
+  // in feet
+  'speedGpsKnots': {
+    'offset': 98,
+    'type': 'FloatLE',
+    'len': 4
+  },
+  // in knots
+  'temperature': {
+    'offset': 102,
+    'type': 'FloatLE',
+    'len': 4
+  },
+  // in °C
   'lowrance_longitude': {
     'offset': 106,
     'type': 'UInt32LE',
@@ -179,13 +373,42 @@ var block_def = {
     'offset': 110,
     'type': 'UInt32LE',
     'len': 4
-  } // Lowrance encoding (northing)
-  // 'speedWaterKnots': {'offset': 114, 'type':  'FloatLE', 'len': 4 },  // from "water wheel sensor" if present, else GPS value(?)
-  // 'courseOverGround': {'offset': 118, 'type':  'FloatLE', 'len': 4 }, // ourseOverGround in radians
-  // 'altitudeFt': {'offset': 122, 'type':  'FloatLE', 'len': 4 },       // in feet
-  // 'heading': {'offset': 126, 'type':  'FloatLE', 'len': 4 },          // in radians
-  // 'flags': {'offset': 130, 'type':'UInt16LE', 'len': 2 },
-  // 'time': {'offset': 138, 'type': 'UInt32LE', 'len': 4 }              // unknown resolution, unknown epoche
+  },
+  // Lowrance encoding (northing)
+  'speedWaterKnots': {
+    'offset': 114,
+    'type': 'FloatLE',
+    'len': 4
+  },
+  // from "water wheel sensor" if present, else GPS value(?)
+  'courseOverGround': {
+    'offset': 118,
+    'type': 'FloatLE',
+    'len': 4
+  },
+  // ourseOverGround in radians
+  'altitudeFt': {
+    'offset': 122,
+    'type': 'FloatLE',
+    'len': 4
+  },
+  // in feet
+  'heading': {
+    'offset': 126,
+    'type': 'FloatLE',
+    'len': 4
+  },
+  // in radians
+  'flags': {
+    'offset': 130,
+    'type': 'UInt16LE',
+    'len': 2
+  },
+  'time': {
+    'offset': 138,
+    'type': 'UInt32LE',
+    'len': 4
+  } // unknown resolution, unknown epoche
 
 };
 
@@ -213,7 +436,7 @@ function getLinebreak() {
 function convert_sl2(sl2_file_buffer) {
   var alive_counter = 0; // counter to regularly show, that the script is still running
 
-  var output_csv_string = "";
+  var output_rows = [];
   var block_offset = 0;
   block_offset += 10; // Startindex of the first block (i.e. skip the 10 Bytes of Header)
 
@@ -221,111 +444,61 @@ function convert_sl2(sl2_file_buffer) {
   var sl2_file_size = dataView.byteLength;
   console.log(sl2_file_size, block_offset);
 
-  var _loop = function _loop() {
+  while (block_offset < sl2_file_size) {
     if (alive_counter % 100 == 0) {
       console.log("".concat(Math.round(100.0 * block_offset / sl2_file_size), "% done..."));
     }
 
     alive_counter += 1;
-    var h = readBlock(dataView, block_offset); // A few conversions into non-proprietary or metric formats:
+    var outputRow = readBlock(dataView, block_offset); // A few conversions into non-proprietary or metric formats:
     // =========================================================
-    // if(h['lowrance_longitude'] != undefined) h['longitude'] = h['lowrance_longitude']/POLAR_EARTH_RADIUS * (180/PI)
-    // [ Caution! ] If the expected longitude (in decimal degrees) is *negative*, use the following line instead:
 
-    if (h['lowrance_longitude'] != undefined) {
-      h['longitude'] = (h['lowrance_longitude'] - MAX_UINT4) / POLAR_EARTH_RADIUS * (180 / PI);
-      delete h['lowrance_longitude'];
+    if (outputRow['lowrance_latitude'] != undefined) {
+      outputRow['latitude'] = (2 * Math.atan(Math.exp(outputRow['lowrance_latitude'] / POLAR_EARTH_RADIUS)) - PI / 2) * (180 / PI);
+      delete outputRow['lowrance_latitude'];
     }
 
-    if (h['lowrance_latitude'] != undefined) {
-      h['latitude'] = (2 * Math.atan(Math.exp(h['lowrance_latitude'] / POLAR_EARTH_RADIUS)) - PI / 2) * (180 / PI);
-      delete h['lowrance_latitude'];
+    if (outputRow['lowrance_longitude'] != undefined) {
+      outputRow['longitude'] = outputRow['lowrance_longitude'] / POLAR_EARTH_RADIUS * (180 / PI); // [ Caution! ] If the expected longitude (in decimal degrees) is *negative*, use the following line instead:
+
+      if (outputRow['longitude'] > 180) outputRow['longitude'] = (outputRow['lowrance_longitude'] - MAX_UINT4) / POLAR_EARTH_RADIUS * (180 / PI);
+      delete outputRow['lowrance_longitude'];
     }
 
-    if (h['waterDepthFt'] != undefined) h['waterDepthM'] = h['waterDepthFt'] * FT2M;
-    if (h['keelDepthFt'] != undefined) h['keelDepthM'] = h['keelDepthFt'] * FT2M;
-    if (h['altitudeFt'] != undefined) h['altitudeM'] = h['altitudeFt'] * FT2M;
-    if (h['speedGpsKnots'] != undefined) h['speedGpsKm'] = h['speedGpsKnots'] * KN2KM;
-    console.log("Read block:", h);
+    if (outputRow['waterDepthFt'] != undefined) {
+      outputRow['waterDepthFt'] *= -1;
+      outputRow['waterDepthM'] = outputRow['waterDepthFt'] * FT2M;
+    }
 
-    if (h['blockSize'] == 0) {
+    if (outputRow['keelDepthFt'] != undefined) {
+      outputRow['keelDepthFt'] *= -1;
+      outputRow['keelDepthM'] = outputRow['keelDepthFt'] * FT2M;
+    }
+
+    if (outputRow['altitudeFt'] != undefined) outputRow['altitudeM'] = outputRow['altitudeFt'] * FT2M;
+    if (outputRow['speedGpsKnots'] != undefined) outputRow['speedGpsKm'] = outputRow['speedGpsKnots'] * KN2KM;
+    console.log("Read block:", outputRow);
+
+    if (outputRow['blockSize'] == 0) {
       // corrupt sl2 files may lead to this
       console.log("ABORTING! (sl2 file may be corrupt): blockSize = 0 found which will otherwise lead to endless loop.");
-      return "break";
+      break;
     }
 
-    block_offset += h['blockSize']; // // Save only one set of data per GPS position to csv-file:
+    block_offset += outputRow['blockSize']; // // Save only one set of data per GPS position to csv-file:
     // unless output_h[[h['latitude'], h['longitude']]]
     // output_h[[h['latitude'], h['longitude']]] = h['waterDepthM']
 
-    if (output_csv_string.length == 0) {
-      //add the header line:
-      output_csv_string += Object.keys(h).join(",") + getLinebreak();
-    } // Finally the prepared line is written to the csv-file:
-
-
-    output_csv_string += Object.keys(h).map(function (keyName) {
-      return h[keyName].toString();
-    }).join(",") + getLinebreak();
-  };
-
-  while (block_offset < sl2_file_size) {
-    var _ret = _loop();
-
-    if (_ret === "break") break;
+    output_rows.push(outputRow);
   } // When finished, output some statistics:
 
 
-  console.log("Found and decoded #{output_h.keys.length} data blocks (distinct gps positions).");
-  return output_csv_string;
+  console.log("Found and decoded " + output_rows.length + "data blocks.");
+  return output_rows;
 }
 
 module.exports = {
   'convert_sl2': convert_sl2
 };
 
-},{}],3:[function(require,module,exports){
-"use strict";
-
-var sl2 = module.exports = require('./lib/ruby_conversion.js');
-
-var download = require('./download.min.js');
-
-var inputElement = document.getElementById("input");
-inputElement.addEventListener("change", handleFiles, false);
-var output_csv_string = "";
-
-function handleFiles(evt) {
-  var files = evt.target.files;
-  var file = files[0];
-  console.log("got file:", file);
-
-  function downloadCSV(string) {
-    download(string, file.name + "_converted.csv", "text/csv");
-  }
-
-  function conversionCompleteHandler() {
-    document.getElementById("message").innerHTML = "Done!";
-    var button = document.getElementById("download_button");
-    button.style.display = 'block';
-
-    button.onclick = function () {
-      downloadCSV(output_csv_string);
-    };
-  }
-
-  var jsFileReader = new FileReader();
-
-  jsFileReader.onload = function (event) {
-    console.log("Loaded file: ", event.target.result);
-    document.getElementById("message").innerHTML = "Converting...";
-    setTimeout(function () {
-      output_csv_string = sl2.convert_sl2(event.target.result);
-      conversionCompleteHandler();
-    }, 10);
-  };
-
-  jsFileReader.readAsArrayBuffer(file);
-}
-
-},{"./download.min.js":1,"./lib/ruby_conversion.js":2}]},{},[3]);
+},{}]},{},[2]);

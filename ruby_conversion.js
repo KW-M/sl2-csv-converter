@@ -28,26 +28,26 @@ const typeReaderFunctions = {
 // Available block attributes, their offset inside each block and their type:
 let block_def = {
     'blockSize': { 'offset': 26, 'type': 'UInt16LE', 'len': 2 },
-    // 'lastBlockSize': {'offset': 28, 'type':'UInt16LE', 'len': 2 },
-    // 'channel': {'offset': 30, 'type':'UInt16LE', 'len': 2 },
-    // 'packetSize': {'offset': 32, 'type': 'UInt16LE', 'len': 2 },
-    // 'frameIndex': {'offset': 34, 'type': 'UInt32LE', 'len': 4 },
-    // 'upperLimit': {'offset': 38, 'type':  'FloatLE', 'len': 4 },
-    // 'lowerLimit': {'offset': 42, 'type':  'FloatLE', 'len': 4 },
-    // 'frequency': {'offset': 51, 'type':  'UInt8', 'len': 1},
-    // 'time1': {'offset': 58, 'type':'UInt16LE', 'len': 4}           // unknown resolution, unknown epoche
+    'lastBlockSize': { 'offset': 28, 'type': 'UInt16LE', 'len': 2 },
+    'channel': { 'offset': 30, 'type': 'UInt16LE', 'len': 2 },
+    'packetSize': { 'offset': 32, 'type': 'UInt16LE', 'len': 2 },
+    'frameIndex': { 'offset': 34, 'type': 'UInt32LE', 'len': 4 },
+    'upperLimit': { 'offset': 38, 'type': 'FloatLE', 'len': 4 },
+    'lowerLimit': { 'offset': 42, 'type': 'FloatLE', 'len': 4 },
+    'frequency': { 'offset': 51, 'type': 'UInt8', 'len': 1 },
+    'time1': { 'offset': 58, 'type': 'UInt16LE', 'len': 4 },           // unknown resolution, unknown epoche
     'waterDepthFt': { 'offset': 62, 'type': 'FloatLE', 'len': 4 },   // in feet
-    // 'keelDepthFt': {'offset': 66, 'type':  'FloatLE', 'len': 4 },    // in feet
-    // 'speedGpsKnots': {'offset': 98, 'type':  'FloatLE', 'len': 4 },  // in knots
-    // 'temperature': {'offset': 102, 'type':  'FloatLE', 'len': 4 },   // in °C
+    'keelDepthFt': { 'offset': 66, 'type': 'FloatLE', 'len': 4 },    // in feet
+    'speedGpsKnots': { 'offset': 98, 'type': 'FloatLE', 'len': 4 },  // in knots
+    'temperature': { 'offset': 102, 'type': 'FloatLE', 'len': 4 },   // in °C
     'lowrance_longitude': { 'offset': 106, 'type': 'UInt32LE', 'len': 4 },   // Lowrance encoding (easting)
     'lowrance_latitude': { 'offset': 110, 'type': 'UInt32LE', 'len': 4 },    // Lowrance encoding (northing)
-    // 'speedWaterKnots': {'offset': 114, 'type':  'FloatLE', 'len': 4 },  // from "water wheel sensor" if present, else GPS value(?)
-    // 'courseOverGround': {'offset': 118, 'type':  'FloatLE', 'len': 4 }, // ourseOverGround in radians
-    // 'altitudeFt': {'offset': 122, 'type':  'FloatLE', 'len': 4 },       // in feet
-    // 'heading': {'offset': 126, 'type':  'FloatLE', 'len': 4 },          // in radians
-    // 'flags': {'offset': 130, 'type':'UInt16LE', 'len': 2 },
-    // 'time': {'offset': 138, 'type': 'UInt32LE', 'len': 4 }              // unknown resolution, unknown epoche
+    'speedWaterKnots': { 'offset': 114, 'type': 'FloatLE', 'len': 4 },  // from "water wheel sensor" if present, else GPS value(?)
+    'courseOverGround': { 'offset': 118, 'type': 'FloatLE', 'len': 4 }, // ourseOverGround in radians
+    'altitudeFt': { 'offset': 122, 'type': 'FloatLE', 'len': 4 },       // in feet
+    'heading': { 'offset': 126, 'type': 'FloatLE', 'len': 4 },          // in radians
+    'flags': { 'offset': 130, 'type': 'UInt16LE', 'len': 2 },
+    'time': { 'offset': 138, 'type': 'UInt32LE', 'len': 4 }              // unknown resolution, unknown epoche
 }
 
 function readBlock(dataView, block_offset) {
@@ -73,8 +73,8 @@ function getLinebreak() {
 
 function convert_sl2(sl2_file_buffer) {
     let alive_counter = 0   // counter to regularly show, that the script is still running
-    let output_csv_string = ""
 
+    let output_rows = [];
     let block_offset = 0
     block_offset += 10   // Startindex of the first block (i.e. skip the 10 Bytes of Header)
 
@@ -89,57 +89,55 @@ function convert_sl2(sl2_file_buffer) {
 
         alive_counter += 1
 
-        let h = readBlock(dataView, block_offset);
+        let outputRow = readBlock(dataView, block_offset);
 
         // A few conversions into non-proprietary or metric formats:
         // =========================================================
 
-        if (h['lowrance_longitude'] != undefined) {
-            h['longitude'] = h['lowrance_longitude'] / POLAR_EARTH_RADIUS * (180 / PI)
+        if (outputRow['lowrance_latitude'] != undefined) {
+            outputRow['latitude'] = ((2 * Math.atan(Math.exp(outputRow['lowrance_latitude'] / POLAR_EARTH_RADIUS))) - (PI / 2)) * (180 / PI)
+            delete outputRow['lowrance_latitude'];
+        }
+
+        if (outputRow['lowrance_longitude'] != undefined) {
+            outputRow['longitude'] = outputRow['lowrance_longitude'] / POLAR_EARTH_RADIUS * (180 / PI)
             // [ Caution! ] If the expected longitude (in decimal degrees) is *negative*, use the following line instead:
-            if (h['longitude'] > 180) h['longitude'] = (h['lowrance_longitude'] - MAX_UINT4) / POLAR_EARTH_RADIUS * (180 / PI)
-            delete h['lowrance_longitude'];
+            if (outputRow['longitude'] > 180) outputRow['longitude'] = (outputRow['lowrance_longitude'] - MAX_UINT4) / POLAR_EARTH_RADIUS * (180 / PI)
+            delete outputRow['lowrance_longitude'];
         }
 
-        if (h['lowrance_latitude'] != undefined) {
-            h['latitude'] = ((2 * Math.atan(Math.exp(h['lowrance_latitude'] / POLAR_EARTH_RADIUS))) - (PI / 2)) * (180 / PI)
-            delete h['lowrance_latitude'];
+        if (outputRow['waterDepthFt'] != undefined) {
+            outputRow['waterDepthFt'] *= -1;
+            outputRow['waterDepthM'] = outputRow['waterDepthFt'] * FT2M
         }
 
-        if (h['waterDepthFt'] != undefined) h['waterDepthM'] = h['waterDepthFt'] * FT2M
+        if (outputRow['keelDepthFt'] != undefined) {
+            outputRow['keelDepthFt'] *= -1;
+            outputRow['keelDepthM'] = outputRow['keelDepthFt'] * FT2M
+        }
 
-        if (h['keelDepthFt'] != undefined) h['keelDepthM'] = h['keelDepthFt'] * FT2M
+        if (outputRow['altitudeFt'] != undefined) outputRow['altitudeM'] = outputRow['altitudeFt'] * FT2M
 
-        if (h['altitudeFt'] != undefined) h['altitudeM'] = h['altitudeFt'] * FT2M
+        if (outputRow['speedGpsKnots'] != undefined) outputRow['speedGpsKm'] = outputRow['speedGpsKnots'] * KN2KM
 
-        if (h['speedGpsKnots'] != undefined) h['speedGpsKm'] = h['speedGpsKnots'] * KN2KM
+        console.log("Read block:", outputRow)
 
-        console.log("Read block:", h)
-
-        if (h['blockSize'] == 0) {  // corrupt sl2 files may lead to this
+        if (outputRow['blockSize'] == 0) {  // corrupt sl2 files may lead to this
             console.log("ABORTING! (sl2 file may be corrupt): blockSize = 0 found which will otherwise lead to endless loop.")
             break
         }
 
-        block_offset += h['blockSize']
+        block_offset += outputRow['blockSize']
 
         // // Save only one set of data per GPS position to csv-file:
         // unless output_h[[h['latitude'], h['longitude']]]
         // output_h[[h['latitude'], h['longitude']]] = h['waterDepthM']
-
-        if (output_csv_string.length == 0) {
-            //add the header line:
-            output_csv_string += Object.keys(h).join(",") + getLinebreak();
-        }
-        // Finally the prepared line is written to the csv-file:
-        output_csv_string += Object.keys(h).map((keyName) => {
-            return h[keyName].toString();
-        }).join(",") + getLinebreak();
+        output_rows.push(outputRow)
     }
 
     // When finished, output some statistics:
-    console.log("Found and decoded #{output_h.keys.length} data blocks (distinct gps positions).");
-    return output_csv_string;
+    console.log("Found and decoded " + output_rows.length + "data blocks.");
+    return output_rows;
 }
 
 module.exports = { 'convert_sl2': convert_sl2 };
