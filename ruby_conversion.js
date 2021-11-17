@@ -40,8 +40,8 @@ let block_def = {
     'keelDepthFt': { 'offset': 66, 'type': 'FloatLE', 'len': 4 },    // in feet
     'speedGpsKnots': { 'offset': 98, 'type': 'FloatLE', 'len': 4 },  // in knots
     'temperature': { 'offset': 102, 'type': 'FloatLE', 'len': 4 },   // in °C
-    'lowrance_longitude': { 'offset': 106, 'type': 'UInt32LE', 'len': 4 },   // Lowrance encoding (easting)
-    'lowrance_latitude': { 'offset': 110, 'type': 'UInt32LE', 'len': 4 },    // Lowrance encoding (northing)
+    'raw_lowrance_longitude': { 'offset': 106, 'type': 'UInt32LE', 'len': 4 },   // Lowrance encoding (easting)
+    'raw_lowrance_latitude': { 'offset': 110, 'type': 'UInt32LE', 'len': 4 },    // Lowrance encoding (northing)
     'speedWaterKnots': { 'offset': 114, 'type': 'FloatLE', 'len': 4 },  // from "water wheel sensor" if present, else GPS value(?)
     'courseOverGround': { 'offset': 118, 'type': 'FloatLE', 'len': 4 }, // ourseOverGround in radians
     'altitudeFt': { 'offset': 122, 'type': 'FloatLE', 'len': 4 },       // in feet
@@ -81,6 +81,7 @@ function convert_sl2(sl2_file_buffer) {
     const dataView = new DataView(sl2_file_buffer, 0)
     const sl2_file_size = dataView.byteLength
     console.log(sl2_file_size, block_offset)
+    var starting_laurence_latitude = null, starting_lowrance_longitude = null;
     while (block_offset < sl2_file_size) {
 
         if (alive_counter % 100 == 0) {
@@ -94,16 +95,22 @@ function convert_sl2(sl2_file_buffer) {
         // A few conversions into non-proprietary or metric formats:
         // =========================================================
 
-        if (outputRow['lowrance_latitude'] != undefined) {
-            outputRow['latitude'] = ((2 * Math.atan(Math.exp(outputRow['lowrance_latitude'] / POLAR_EARTH_RADIUS))) - (PI / 2)) * (180 / PI)
-            delete outputRow['lowrance_latitude'];
+        if (outputRow['raw_lowrance_latitude'] != undefined) {
+            outputRow['latitude'] = ((2 * Math.atan(Math.exp(outputRow['raw_lowrance_latitude'] / POLAR_EARTH_RADIUS))) - (PI / 2)) * (180 / PI)
+
+            // Calculate the displacement of the current point from the starting point using the raw laurence lat values:
+            if (starting_laurence_latitude == null) starting_laurence_latitude = outputRow['raw_lowrance_latitude']
+            outputRow['y_displacement'] = outputRow['raw_lowrance_latitude'] - starting_laurence_latitude;
         }
 
-        if (outputRow['lowrance_longitude'] != undefined) {
-            outputRow['longitude'] = outputRow['lowrance_longitude'] / POLAR_EARTH_RADIUS * (180 / PI)
+        if (outputRow['raw_lowrance_longitude'] != undefined) {
+            outputRow['longitude'] = outputRow['raw_lowrance_longitude'] / POLAR_EARTH_RADIUS * (180 / PI)
             // [ Caution! ] If the expected longitude (in decimal degrees) is *negative*, use the following line instead:
-            if (outputRow['longitude'] > 180) outputRow['longitude'] = (outputRow['lowrance_longitude'] - MAX_UINT4) / POLAR_EARTH_RADIUS * (180 / PI)
-            delete outputRow['lowrance_longitude'];
+            if (outputRow['longitude'] > 180) outputRow['longitude'] = (outputRow['raw_lowrance_longitude'] - MAX_UINT4) / POLAR_EARTH_RADIUS * (180 / PI)
+
+            // Calculate the displacement of the current point from the starting point using the raw laurence lon values:
+            if (starting_lowrance_longitude == null) starting_lowrance_longitude = outputRow['raw_lowrance_longitude']
+            outputRow['x_displacement'] = outputRow['raw_lowrance_longitude'] - starting_lowrance_longitude;
         }
 
         if (outputRow['waterDepthFt'] != undefined) {
