@@ -7,7 +7,7 @@ import MultiSelect from '@dotburo/multi-select';
 // Register service worker to control making site work offline
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker
-        .register(new URL('sw.js', import.meta.url))
+        .register(new URL('../sw.js', import.meta.url))
         .then(() => { console.log('Service Worker Registered'); });
 }
 
