@@ -5,11 +5,13 @@ The live website of this repo can be found at: [kw-m.github.io/sl2-csv-converter
 
 How to build and run this version:
 
-1. Install node js
+1. Install node js and pnpm
 2. open terminal & `cd` into this folder.
-3. to install required packages initally run `npm install`
-4. run `npm run build` anytime you change the javascript code.
-5. open `index.html` in your browser.
+3. to install required packages initally run `pnpm install`
+4. run `pnpm run dev` to preview the website.
+5. run `pnpm run build` to build the final website.
+
+Pull requests welcome!
 
 
 # File format
