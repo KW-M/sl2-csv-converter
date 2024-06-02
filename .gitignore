@@ -12,3 +12,7 @@ node_modules/
 
 #vscode
 .vscode/
+
+
+#parcel
+.parcel-cache/

@@ -1,11 +1,21 @@
-var sl2 = require('./ruby_conversion.js');
-var download = require('./download.min.js')
+import convert_sl2 from './ruby_conversion.js';
+import download from './download.min.js'
 // var MultiSelect = require('./multi-select-umd.js')
-// import MultiSelect from 'multi-select';
+import MultiSelect from '@dotburo/multi-select';
 
 
-const inputElement = document.getElementById("input");
-inputElement.addEventListener("change", handleFiles, false);
+// Register service worker to control making site work offline
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker
+        .register(new URL('sw.js', import.meta.url))
+        .then(() => { console.log('Service Worker Registered'); });
+}
+
+window.addEventListener("load", function () {
+    console.log("Page loaded");
+    const inputElement = document.getElementById("input");
+    inputElement.addEventListener("change", handleFiles, false);
+})
 
 function setMessage(message) {
     document.getElementById("message").innerHTML = message;
@@ -24,7 +34,7 @@ function addColumnSelctionPicker(resultObject) {
     // var selectParent = document.getElementById("Column_Selector")
 
     var options = []
-    console.log(resultObject)
+
     for (var key in resultObject[0]) {
         options.push(key);
     }
@@ -146,14 +156,28 @@ function handleFiles(evt) {
 
     var jsFileReader = new FileReader();
     jsFileReader.onload = function (event) {
-        console.log("Loaded file: ", event.target.result);
+        var file_contents = event.target.result
+        console.log("Loaded file: ", file_contents);
         document.getElementById("Info_Text").style.display = "none";
         document.getElementById("input").disabled = "true";
-        document.getElementById("message").innerHTML = "Converting... (May make page unresponsive)"
+        var message_el = document.getElementById("message");
+        var progress_el = document.getElementById("progress-bar");
+        message_el.innerHTML = "Converting... (May make page unresponsive)";
+        progress_el.style.display = "block";
         setTimeout(function () { // give the message time to be displayed before blocking the UI thread.
-            var output = sl2.convert_sl2(event.target.result);
-            conversionCompleteHandler(output);
-        }, 100);
+            convert_sl2(file_contents, async (percent_done) => {
+                message_el.innerHTML = `Converting... ${percent_done}% done`;
+                progress_el.value = percent_done / 100.0;
+                await new Promise((r) => setTimeout(r, 0))
+            }).then((output) => {
+                progress_el.style.display = "none";
+                conversionCompleteHandler(output);
+            }).catch((error) => {
+                console.error("Conversion failed: ", error);
+                progress_el.style.display = "none";
+                message_el.innerHTML = "Conversion failed. Please reload the page and try again.";
+            });
+        }, 1);
     }
     jsFileReader.readAsArrayBuffer(file)
 

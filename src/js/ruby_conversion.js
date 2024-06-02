@@ -59,7 +59,7 @@ function readBlock(dataView, block_offset) {
             const type = block_def[key].type;
             const typeReader = typeReaderFunctions[type];
             output[key] = typeReader(dataView, value_byte_offset)
-            console.log(`${key} is ${value_byte_offset}`)
+            // console.log(`${key} is ${value_byte_offset}`)
         }
     }
     return output;
@@ -71,7 +71,7 @@ function getLinebreak() {
 }
 
 
-function convert_sl2(sl2_file_buffer) {
+async function convert_sl2(sl2_file_buffer, progress_callback) {
     let alive_counter = 0   // counter to regularly show, that the script is still running
 
     let output_rows = [];
@@ -84,8 +84,9 @@ function convert_sl2(sl2_file_buffer) {
     var starting_laurence_latitude = null, starting_lowrance_longitude = null;
     while (block_offset < sl2_file_size) {
 
-        if (alive_counter % 100 == 0) {
-            console.log(`${Math.round(100.0 * block_offset / sl2_file_size)}% done...`)
+        if (alive_counter % 500 == 0) {
+            var percent = 100.0 * block_offset / sl2_file_size
+            await progress_callback(Math.round(percent));
         }
 
         alive_counter += 1
@@ -127,11 +128,11 @@ function convert_sl2(sl2_file_buffer) {
 
         if (outputRow['speedGpsKnots'] != undefined) outputRow['speedGpsKm'] = outputRow['speedGpsKnots'] * KN2KM
 
-        console.log("Read block:", outputRow)
+        // console.log("Read block:", outputRow)
 
         if (outputRow['blockSize'] == 0) {  // corrupt sl2 files may lead to this
-            console.log("ABORTING! (sl2 file may be corrupt): blockSize = 0 found which will otherwise lead to endless loop.")
-            break
+            alert("ABORTING! (sl2 file may be corrupt): blockSize = 0 found which will otherwise lead to endless loop.")
+            break;
         }
 
         block_offset += outputRow['blockSize']
@@ -144,7 +145,7 @@ function convert_sl2(sl2_file_buffer) {
 
     // When finished, output some statistics:
     console.log("Found and decoded " + output_rows.length + "data blocks.");
-    return output_rows;
+    return output_rows
 }
 
-module.exports = { 'convert_sl2': convert_sl2 };
+export default convert_sl2;
