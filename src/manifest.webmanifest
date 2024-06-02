@@ -1,5 +1,5 @@
 {
-  "background_color": "purple",
+  "background_color": "white",
   "description": "Converts SL2 files to CSV or KML format",
   "display": "standalone",
   "icons": [
@@ -9,7 +9,7 @@
       "type": "image/png"
     }
   ],
-  "start_url": "./index.html",
+  "start_url": "./",
   "name": "SL2 Converter",
   "short_name": "Convert SL2"
 }
